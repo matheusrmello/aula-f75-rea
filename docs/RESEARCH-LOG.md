@@ -3,6 +3,11 @@
 Raw hardware experiments using `tools/hidraw_lab.c` (direct hidraw feature-report
 I/O, no browser). All dates 2026-08-24 unless noted.
 
+See also `docs/OEM-PROTOCOL-NOTES.md` — static analysis of the official
+Windows driver (OemDrv.exe), extracted to frame layouts, command tables, the
+prefix-05/06/08/09 semantics, AccessData ops, and the LED-profile Cfg(Save)
+path. Facts only; no proprietary code reused.
+
 ## Setup
 
 - Vendor interface = `/dev/hidraw1` (`bInterfaceNumber 01`); hidraw0 is the
