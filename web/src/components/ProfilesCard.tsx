@@ -7,6 +7,7 @@ import {
 } from '@/lib/profiles';
 import { isFeatureTransport, readConfigRegion, writeConfigRegion } from '@/lib/f75';
 import type { Layer } from '@/lib/keybind';
+import { WIRELESS_PID } from '@/lib/protocol';
 
 const REMAP_KEY = 'aula-f75.remap';
 
@@ -27,6 +28,7 @@ export function ProfilesCard({ device, log, onWriteKeybind }: {
     log: (msg: string) => void;
     onWriteKeybind: (layer: Layer, blob: Uint8Array) => Promise<void>;
 }) {
+    const wireless = device?.productId === WIRELESS_PID;
     const [profiles, setProfiles] = useState<Profile[]>(listProfiles);
     const [name, setName] = useState('');
     const [status, setStatus] = useState('');
@@ -82,7 +84,7 @@ export function ProfilesCard({ device, log, onWriteKeybind }: {
     return (
         <div className="bg-zinc-900/60 border border-zinc-800 rounded-xl p-5 backdrop-blur-sm space-y-3 sm:col-span-2">
             <h3 className="text-sm font-medium text-zinc-300">Keybind Profiles</h3>
-            <p className="text-xs text-zinc-600">Captures the current Default/FN1 remaps from the Remap tab.</p>
+            <p className="text-xs text-zinc-600">Captures the current Default/FN1 remaps from the Remap tab. {wireless && 'Apply requires a USB-C connection; dongle key remapping is not confirmed.'}</p>
             <div className="flex gap-2">
                 <input
                     value={name} onChange={(e) => setName(e.target.value)} placeholder="Profile name"
@@ -96,7 +98,7 @@ export function ProfilesCard({ device, log, onWriteKeybind }: {
                     <div key={p.id} className="flex items-center justify-between border border-zinc-800 rounded-lg px-3 py-2">
                         <span className="text-sm text-zinc-300">{p.name}</span>
                         <span className="flex gap-2">
-                            <button onClick={() => apply(p)} className="text-xs px-2 py-1 rounded bg-violet-600/20 border border-violet-500/40 text-violet-300">Apply</button>
+                            <button onClick={() => apply(p)} disabled={wireless} title={wireless ? 'Connect over USB-C to apply key remaps' : undefined} className="text-xs px-2 py-1 rounded bg-violet-600/20 border border-violet-500/40 text-violet-300 disabled:opacity-40 disabled:cursor-not-allowed">Apply</button>
                             <button onClick={() => doExport(p)} className="text-xs px-2 py-1 rounded border border-zinc-700 text-zinc-400">Export</button>
                             <button onClick={() => remove(p.id)} className="text-xs px-2 py-1 rounded border border-red-500/40 text-red-400">Delete</button>
                         </span>

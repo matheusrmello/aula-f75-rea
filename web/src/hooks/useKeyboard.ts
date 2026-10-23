@@ -7,10 +7,13 @@ import { isFeatureTransport, readConfigRegion, readColorTable } from '@/lib/f75'
 import { calibrate, clearLayout, probeSelectViaKnob, snapshotConfig, restoreSnapshot, probeSelfDefineSlots } from '@/lib/f75-layout';
 import { buildTrace, collectEnv, downloadTrace } from '@/lib/trace';
 import { stopPreviewKeepalive } from '@/lib/direct-mode';
+import { hasExpectedTransportReport, selectKeyboard, type ConnectionChoice } from '@/lib/deviceinfo';
 
 export function useKeyboard() {
     const [device, setDevice] = useState<HIDDevice | null>(null);
     const [connected, setConnected] = useState(false);
+    const [connecting, setConnecting] = useState(false);
+    const connectingRef = useRef(false);
     const [status, setStatus] = useState('Not connected');
     const [logs, setLogs] = useState<string[]>([]);
     const logsRef = useRef<string[]>([]);
@@ -28,7 +31,8 @@ export function useKeyboard() {
         console.log(msg);
     }, []);
 
-    const connect = useCallback(async (vendorFilter: boolean) => {
+    const connect = useCallback(async (choice: ConnectionChoice = 'auto') => {
+        if (connectingRef.current) return;
         if (device?.opened) {
             await device.close();
             setDevice(null);
@@ -38,23 +42,10 @@ export function useKeyboard() {
             return;
         }
 
+        connectingRef.current = true;
+        setConnecting(true);
+        setStatus('Looking for AULA F75...');
         try {
-            let filters: HIDDeviceFilter[];
-            if (vendorFilter) {
-                filters = [];
-                for (let page = 0xff00; page <= 0xff04; page++) {
-                    filters.push({ vendorId: WIRED_VID, productId: WIRED_PID, usagePage: page });
-                    filters.push({ vendorId: WIRELESS_VID, productId: WIRELESS_PID, usagePage: page });
-                }
-                log('Requesting device (vendor pages)...');
-            } else {
-                filters = [
-                    { vendorId: WIRED_VID, productId: WIRED_PID },
-                    { vendorId: WIRELESS_VID, productId: WIRELESS_PID },
-                ];
-                log('Requesting device (any)...');
-            }
-
             const hid = (navigator as Navigator & { hid?: HID }).hid;
             if (!hid) {
                 const reason = isSecureContext
@@ -65,8 +56,27 @@ export function useKeyboard() {
                 return;
             }
 
-            const [dev] = await hid.requestDevice({ filters });
-            if (!dev) { log('No device selected'); return; }
+            log(`Looking for AULA F75 (${choice})...`);
+            // The desktop app grants access only to the two supported AULA IDs.
+            // Reuse those devices before showing a browser permission chooser.
+            let dev = selectKeyboard(await hid.getDevices(), choice);
+            if (!dev) {
+                const filters: HIDDeviceFilter[] = [];
+                if (choice !== 'wireless') filters.push({ vendorId: WIRED_VID, productId: WIRED_PID });
+                if (choice !== 'wired') filters.push({ vendorId: WIRELESS_VID, productId: WIRELESS_PID });
+                log('Requesting AULA device access...');
+                dev = selectKeyboard(await hid.requestDevice({ filters }), choice);
+            }
+            if (!dev) {
+                const reason = choice === 'wireless'
+                    ? 'Dongle not found. Connect the receiver and set the keyboard to 2.4 GHz.'
+                    : choice === 'wired'
+                        ? 'USB keyboard not found. Connect a data cable and set the keyboard to USB mode.'
+                        : 'No AULA configuration interface selected. Check USB/2.4 GHz mode and the Linux udev rule.';
+                log(reason);
+                setStatus(reason);
+                return;
+            }
 
             const vid = dev.vendorId.toString(16).padStart(4, '0');
             const pid = dev.productId.toString(16).padStart(4, '0');
@@ -78,10 +88,14 @@ export function useKeyboard() {
                 const feat = c.featureReports?.map(r => `0x${(r.reportId ?? 0).toString(16)}`).join(',') ?? '';
                 log(`Collection page ${cp}: out=[${out}] feat=[${feat}]`);
             }
-            const hasFeature06 = dev.collections.some(c => (c.featureReports ?? []).some(r => (r.reportId ?? 0) === 0x06));
-            if (!hasFeature06) {
-                log('WARNING: no collection exposes feature report 0x06 — pick the vendor interface (the second device entry), not the plain keyboard one.');
-                setStatus('⚠ Wrong interface — reconnect and pick the vendor collection');
+            const isWireless = dev.vendorId === WIRELESS_VID && dev.productId === WIRELESS_PID;
+            const expectedReport = hasExpectedTransportReport(dev);
+            if (!expectedReport) {
+                log(isWireless
+                    ? 'WARNING: no collection exposes output report 0x13 — reconnect and choose the receiver interface.'
+                    : 'WARNING: no collection exposes feature report 0x06 — reconnect and choose the vendor keyboard interface.');
+                setStatus('⚠ Wrong interface — reconnect and choose the AULA vendor interface');
+                return;
             }
 
             try {
@@ -91,7 +105,7 @@ export function useKeyboard() {
                 log(`Error: Failed to open ${model} (${vid}:${pid}): ${msg}`);
                 log('Hint: on Linux this means the browser cannot access the keyboard\'s /dev/hidraw node.');
                 log('  Install the udev rule, reload it, then replug the keyboard:');
-                log('    sudo cp udev/99-aula-f75.rules /etc/udev/rules.d/');
+                log('    sudo install -m 0644 udev/70-aula-f75.rules /etc/udev/rules.d/70-aula-f75.rules');
                 log('    sudo udevadm control --reload-rules && sudo udevadm trigger');
                 log('  Also close any other tab/app that has the keyboard open (only one page can hold it).');
                 setStatus(`Error: failed to open ${model}`);
@@ -99,22 +113,26 @@ export function useKeyboard() {
             }
 
             setDevice(dev);
+            deviceRef.current = dev;
             setConnected(true);
             log(`Connected: ${model} (${vid}:${pid})`);
 
-            const hasVendor = dev.collections.some(c => (c.usagePage ?? 0) >= 0xff00);
-            setStatus(hasVendor
-                ? `Connected: ${model} (${vid}:${pid})`
-                : '⚠ Wrong interface — no vendor collection'
+            setStatus(expectedReport
+                ? `Connected: ${model} (${vid}:${pid}) · ${isWireless ? '2.4 GHz dongle' : 'USB wired'}`
+                : '⚠ Wrong interface — expected AULA report not found'
             );
         } catch (err: unknown) {
             const msg = err instanceof Error ? err.message : String(err);
             if (err instanceof DOMException && (err.name === 'NotFoundError' || err.name === 'AbortError')) {
                 log('Connect cancelled — no device selected');
+                setStatus('No AULA device selected');
                 return;
             }
             log(`Error: ${msg}`);
             setStatus(`Error: ${msg}`);
+        } finally {
+            connectingRef.current = false;
+            setConnecting(false);
         }
     }, [device, log]);
 
@@ -282,7 +300,7 @@ export function useKeyboard() {
     }, [status, connected, log]);
 
     return {
-        device, connected, status, logs, log,
+        device, connected, connecting, status, logs, log,
         connect, doSetEffect, doApplyPerKey, doSetSleep, doSetDebounce, doFactoryReset, doReadConfig, doWriteKeybind,
         doDumpConfig, doDumpColors, doCalibrate, doClearLayout, doProbeSelect, doSnapshotDefaults, doRestoreDefaults,
         doPerKeyLab, doSaveTrace,

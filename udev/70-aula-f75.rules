@@ -1,0 +1,5 @@
+# Grant access only to the AULA F75 USB interface and its 2.4 GHz receiver
+# for the active local desktop session. No world-writable hidraw permissions.
+# This must sort before 73-seat-late.rules, which applies the uaccess ACL.
+SUBSYSTEM=="hidraw", ATTRS{idVendor}=="258a", ATTRS{idProduct}=="010c", TAG+="uaccess"
+SUBSYSTEM=="hidraw", ATTRS{idVendor}=="3554", ATTRS{idProduct}=="fa09", TAG+="uaccess"

@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 // Parse the OEM KB.ini [KEY] / [FN1] sections into f75-keymap.json.
-//   [KEY]  K<n>=x,y,w,h, <page>, <vk>, 0x00, <index>
+//   [KEY]  K<n>=left,top,right,bottom, <page>, <vk>, 0x00, <index>
+// Normalize OEM rectangle endpoints to SVG x/y/width/height.
 //   [FN1]  K<n>=0x09,0x01,<0xHHHHHHHH>   (32-bit: page<<16 | usage)
 import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -27,11 +28,13 @@ function parseKeyLine(line) {
   const body = line.split("=")[1].trim();
   const p = body.split(",").map((s) => s.trim());
   if (p.length !== 8) return null;
-  const [x, y, w, h, , vk, , index] = p;
+  const [left, top, right, bottom, , vk, , index] = p;
+  const x = parseInt(left, 10);
+  const y = parseInt(top, 10);
   return {
     index: parseInt(index, 10),
-    vk: toInt(vk), x: parseInt(x, 10), y: parseInt(y, 10),
-    w: parseInt(w, 10), h: parseInt(h, 10),
+    vk: toInt(vk), x, y,
+    w: parseInt(right, 10) - x, h: parseInt(bottom, 10) - y,
   };
 }
 

@@ -7,6 +7,7 @@ import {
   type F75Key, type Layer,
 } from "../lib/keybind";
 import { vkToOutput, type Output } from "../lib/vkmap";
+import { WIRELESS_PID } from "../lib/protocol";
 
 const LS_KEY = "aula-f75.remap";
 
@@ -28,13 +29,15 @@ function initialBlobs(): Blobs {
   };
 }
 
-export function RemapPanel({ onWriteKeybind }: {
+export function RemapPanel({ onWriteKeybind, productId }: {
+  productId?: number;
   onWriteKeybind: (layer: Layer, blob: Uint8Array) => Promise<void>;
 }) {
   const [layer, setLayer] = useState<Layer>(LAYER_BASE);
   const [sel, setSel] = useState<number | null>(null);
   const [blobs, setBlobs] = useState<Blobs>(initialBlobs);
   const [status, setStatus] = useState("");
+  const wireless = productId === WIRELESS_PID;
 
   const byIndex = useMemo(() => {
     const m: Record<number, F75Key> = {};
@@ -101,7 +104,7 @@ export function RemapPanel({ onWriteKeybind }: {
 
   return (
     <div className="grid gap-4">
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         <label className="text-sm font-medium text-zinc-300">Layer</label>
         <button
           onClick={() => setLayer(LAYER_BASE)}
@@ -118,23 +121,51 @@ export function RemapPanel({ onWriteKeybind }: {
         <span className="ml-auto text-xs text-zinc-500">Click a key, then choose its output. F1–F12 are reserved by the firmware.</span>
       </div>
 
-      <svg viewBox={`${geo.minX} ${geo.minY} ${vw} ${vh}`} className="w-full" style={{ maxHeight: 320 }}>
+      {wireless && <p className="rounded-lg border border-amber-500/30 bg-amber-500/5 px-3 py-2 text-xs text-amber-300">Key remapping over the 2.4 GHz dongle is not supported by the confirmed protocol. Connect the keyboard by USB-C to apply key layers.</p>}
+
+      <svg
+        viewBox={`${geo.minX - 4} ${geo.minY - 4} ${vw + 8} ${vh + 8}`}
+        className="block w-full h-auto select-none"
+        style={{ maxHeight: 360 }}
+        role="group"
+        aria-label="AULA F75 key remapping"
+      >
         {keymap.keys.map((k) => {
           const locked = !!k.locked;
           const selected = sel === k.index && !locked;
           return (
-            <rect
-              key={k.index} x={k.x} y={k.y} width={k.w} height={k.h} rx={4}
-              fill={locked ? "#27272a" : selected ? "#7c3aed" : "#3f3f46"}
-              stroke={locked ? "#333" : selected ? "#a78bfa" : "#52525b"}
-              className={locked ? "" : "cursor-pointer"}
+            <g
+              key={k.index}
+              role="button"
+              aria-label={k.label}
+              aria-disabled={locked}
+              aria-pressed={selected}
+              tabIndex={locked ? -1 : 0}
+              className={`group outline-none${locked ? "" : " cursor-pointer"}`}
               onClick={() => { if (!locked) setSel(k.index); }}
-            />
+              onKeyDown={(event) => {
+                if (!locked && (event.key === "Enter" || event.key === " ")) {
+                  event.preventDefault();
+                  setSel(k.index);
+                }
+              }}
+            >
+              <title>{locked ? `${k.label} — reserved by firmware` : k.label}</title>
+              <rect
+                x={k.x} y={k.y} width={k.w} height={k.h} rx={3}
+                fill={locked ? "#27272a" : selected ? "#7c3aed" : "#3f3f46"}
+                stroke={locked ? "#333" : selected ? "#a78bfa" : "#52525b"}
+                className={locked ? "" : `${selected ? "" : "group-hover:fill-zinc-600 "}group-focus-visible:stroke-violet-300`}
+              />
+              <text
+                x={k.x + k.w / 2} y={k.y + k.h / 2}
+                textAnchor="middle" dominantBaseline="central"
+                fontSize={9} fill={locked ? "#a1a1aa" : "#e4e4e7"}
+                pointerEvents="none"
+              >{k.label}</text>
+            </g>
           );
         })}
-        {keymap.keys.map((k) => (
-          <text key={"t" + k.index} x={k.x + k.w / 2} y={k.y + k.h / 2 + 3} textAnchor="middle" fontSize={11} fill="#e4e4e7">{k.label}</text>
-        ))}
       </svg>
 
       {sel !== null && !byIndex[sel]?.locked && (
@@ -148,7 +179,7 @@ export function RemapPanel({ onWriteKeybind }: {
             <button className="border border-zinc-700 text-xs px-1 py-1 rounded" onClick={resetKey}>Reset key</button>
           </div>
           <div className="flex gap-2">
-            <button onClick={apply} className="bg-violet-600 px-4 py-2 text-sm rounded-lg text-white">Apply {layer === LAYER_BASE ? "Default" : "FN1"} layer</button>
+            <button onClick={apply} disabled={wireless} className="bg-violet-600 px-4 py-2 text-sm rounded-lg text-white disabled:cursor-not-allowed disabled:opacity-40">Apply {layer === LAYER_BASE ? "Default" : "FN1"} layer</button>
             <button onClick={resetLayer} className="border border-zinc-700 px-4 py-2 text-sm rounded-lg text-zinc-300">Reset layer</button>
           </div>
         </div>

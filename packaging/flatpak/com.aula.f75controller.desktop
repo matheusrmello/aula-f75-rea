@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=AULA F75 Controller
+Comment=Configure AULA F75 lighting and settings
+Comment[pt_BR]=Configure a iluminação e os ajustes do AULA F75
+Exec=aula-f75-controller
+Icon=com.aula.f75controller
+Terminal=false
+Categories=Utility;Settings;
+StartupWMClass=com.aula.f75controller

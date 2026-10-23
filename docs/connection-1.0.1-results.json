@@ -1,0 +1,50 @@
+{
+  "timestamp": "2026-10-22T18:14:57.166Z",
+  "package": "Flatpak 1.0.1",
+  "checks": [
+    {
+      "mode": "auto",
+      "status": "Connected: Gaming Keyboard (258a:010c) · USB wired"
+    },
+    {
+      "mode": "wired",
+      "status": "Connected: Gaming Keyboard (258a:010c) · USB wired"
+    },
+    {
+      "wiredReadOnlyQuery": {
+        "bytes": 136,
+        "header": [
+          6,
+          132,
+          0,
+          0,
+          1,
+          0,
+          128,
+          0
+        ],
+        "dataNonzero": true
+      }
+    },
+    {
+      "mode": "wireless",
+      "status": "Connected: 2.4G Wireless Receiver (3554:fa09) · 2.4 GHz dongle"
+    },
+    {
+      "nativeRequestDevice": [
+        {
+          "vendorId": 9610,
+          "productId": 268
+        }
+      ]
+    },
+    {
+      "nativeRequestDevice": [
+        {
+          "vendorId": 13652,
+          "productId": 64009
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>com.aula.f75controller</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <name>AULA F75 Controller</name>
+  <summary>Configure AULA F75 keyboard lighting and settings</summary>
+  <summary xml:lang="pt-BR">Configure a iluminação e os ajustes do teclado AULA F75</summary>
+  <description>
+    <p>Control lighting effects, per-key colors and live animations on the AULA F75 over USB or its supported 2.4 GHz receiver. Remapping requires a wired connection.</p>
+    <p xml:lang="pt-BR">Controle efeitos, cores por tecla e animações no AULA F75 por USB ou pelo receptor 2,4 GHz compatível. O remapeamento requer conexão por cabo.</p>
+  </description>
+  <launchable type="desktop-id">com.aula.f75controller.desktop</launchable>
+  <url type="homepage">https://github.com/cloudglides/aula-f75-linux-drivers</url>
+  <developer id="com.aula.f75controller"><name>AULA F75 Linux Controller contributors</name></developer>
+  <provides><binary>aula-f75-controller</binary></provides>
+  <content_rating type="oars-1.1"/>
+  <releases><release version="1.0.2" date="2026-10-22"/><release version="1.0.1" date="2026-10-22"/><release version="1.0.0" date="2026-10-22"/></releases>
+</component>

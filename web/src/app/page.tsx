@@ -34,12 +34,15 @@ export default function Home() {
           <h1 className="text-lg font-semibold tracking-tight text-zinc-100">
             AULA F75 <span className="font-normal text-zinc-500">controller</span>
           </h1>
-          <p className="font-mono text-[0.7rem] text-zinc-600">258A:010C · WebHID · local only</p>
+          <p className="font-mono text-[0.7rem] text-zinc-600">
+            {kb.device?.productId === 0xfa09 ? '2.4 GHz dongle · 3554:FA09' : kb.device?.opened ? 'USB wired · 258A:010C' : 'USB + 2.4 GHz · WebHID · local only'}
+          </p>
         </div>
       </header>
 
       {/* Connection */}
       <ConnectionBar
+        connecting={kb.connecting}
         connected={kb.connected}
         status={kb.status}
         onConnect={kb.connect}
@@ -85,7 +88,7 @@ export default function Home() {
             log={kb.log}
           />
         )}
-        {tab === 'remap' && <RemapPanel onWriteKeybind={kb.doWriteKeybind} />}
+        {tab === 'remap' && <RemapPanel productId={kb.device?.productId} onWriteKeybind={kb.doWriteKeybind} />}
         {tab === 'macros' && (
             <MacrosPanel
                 device={kb.device}
@@ -106,7 +109,7 @@ export default function Home() {
       <LogPanel logs={kb.logs} onSaveTrace={kb.doSaveTrace} />
 
       <footer className="mt-4 mb-2 text-center">
-        <p className="text-[0.7rem] text-zinc-700">Runs entirely in your browser. Keyboard traffic never leaves this machine.</p>
+        <p className="text-[0.7rem] text-zinc-700">Runs locally. Keyboard traffic never leaves this machine.</p>
       </footer>
     </main>
   );

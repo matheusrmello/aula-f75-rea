@@ -1,0 +1,47 @@
+{
+  "name": "aula-f75-linux-controller",
+  "version": "1.0.2",
+  "private": true,
+  "description": "Linux desktop controller for the AULA F75 keyboard",
+  "author": "AULA F75 Linux Controller contributors <noreply@example.invalid>",
+  "main": "electron/main.cjs",
+  "desktopName": "com.aula.f75controller.desktop",
+  "scripts": {
+    "test:desktop": "node --test electron/hid-policy.test.cjs",
+    "build:web": "npm --prefix web run build",
+    "start": "npm run build:web && electron .",
+    "dist:deb": "npm run build:web && electron-builder --linux deb",
+    "dist:appimage": "npm run build:web && electron-builder --linux AppImage",
+    "dist:flatpak": "npm run build:web && electron-builder --linux dir && python3 packaging/flatpak/build.py",
+    "dist:portable": "npm run dist:appimage && npm run dist:flatpak",
+    "dist:linux": "npm run build:web && electron-builder --linux deb AppImage"
+  },
+  "devDependencies": {
+    "electron": "^45.0.0",
+    "electron-builder": "^26.0.12"
+  },
+  "build": {
+    "appId": "com.aula.f75controller",
+    "productName": "AULA F75 Controller",
+    "asar": true,
+    "files": [
+      "electron/*.cjs",
+      "!electron/*.test.cjs",
+      "web/out/**/*"
+    ],
+    "linux": {
+      "category": "Utility",
+      "icon": "packaging/flatpak/256x256.png",
+      "syncDesktopName": true,
+      "target": ["deb", "AppImage"],
+      "artifactName": "AULA-F75-Controller-${version}-${arch}.${ext}",
+      "desktop": {
+        "entry": {
+          "Name": "AULA F75 Controller",
+          "Comment": "Configure AULA F75 lighting and settings",
+          "Categories": "Utility;Settings;"
+        }
+      }
+    }
+  }
+}
